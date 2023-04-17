@@ -20,7 +20,7 @@ app.use("/auth", userRouter);
 app.use("/recipes", recipesRouter);
 
 // Conexão com o MongoDB Atlas
-mongoose.connect("mongodb+srv://<username>:<password>@<cluster-url>/recipes?retryWrites=true&w=majority");
+mongoose.connect("mongodb+srv://receitasapp:FPEZnjRImn5diruo@recipes.nz4fv7v.mongodb.net/recipes?retryWrites=true&w=majority");
 
 // Inicia o servidor na porta 3001
 app.listen(3001, () => console.log("Servidor iniciado na porta 3001"));

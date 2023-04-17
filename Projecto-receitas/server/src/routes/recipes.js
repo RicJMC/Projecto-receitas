@@ -2,6 +2,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import { RecipeModel } from '../models/recipes.js';
 import { UserModel } from '../models/Users.js';
+import { verifyToken } from './users.js';
 
 const router = express.Router();
 
@@ -16,8 +17,8 @@ router.get('/', async (req, res) => {
 });
 
 // Rota para criar uma nova receita
-router.post('/', async (req, res) => {
-  const { name, ingredients, instructions, imageURL, cookingTime, userOwner } = req.body;
+router.post('/', verifyToken, async (req, res) => {
+  const { name, ingredients, instructions, imageUrl, cookingTime, userOwner } = req.body;
 
   // Verifica se todos os campos obrigatórios foram preenchidos
   if (!name) {
@@ -29,8 +30,8 @@ router.post('/', async (req, res) => {
   if (!instructions) {
     return res.status(400).json({ message: 'Missing required field: instructions' });
   }
-  if (!imageURL) {
-    return res.status(400).json({ message: 'Missing required field: imageURL' });
+  if (!imageUrl) {
+    return res.status(400).json({ message: 'Missing required field: imageUrl' });
   }
   if (!cookingTime) {
     return res.status(400).json({ message: 'Missing required field: cookingTime' });
@@ -44,7 +45,7 @@ router.post('/', async (req, res) => {
     name,
     ingredients,
     instructions,
-    imageURL,
+    imageUrl,
     cookingTime,
     userOwner,
   });
@@ -59,8 +60,86 @@ router.post('/', async (req, res) => {
 });
 
 // Rota para atualizar uma receita existente
+
+
+// Rota para buscar os IDs das receitas salvas pelo usuário
+router.get("/savedRecipes/ids/:userID", async (req, res) => {
+  try {
+    // Busca o usuário pelo ID e retorna os IDs das receitas salvas
+    const user = await UserModel.findById(req.params.userID)
+    res.json({ savedRecipes: user?.savedRecipes })
+    
+
+  } catch (error) {
+    res.json(error)
+  }
+})
+// // Rota para buscar as receitas salvas pelo usuário
+// router.get("/savedRecipes/:userID", async (req, res) => {
+//   try {
+//   const user = await UserModel.findById(req.params.userID);
+//   const savedRecipes = await RecipeModel.find({
+//   _id: { $in: user.savedRecipes }
+//   });
+//     res.json({ savedRecipes });
+//   } catch (error) {
+//   res.status(500).json({ error: error.message });
+//   }
+//   });
+//save a recipe
+
+// router.put("/:recipeId", async (req, res) => {
+//   const { name, ingredients, instructions, imageUrl, cookingTime } = req.body;
+//   const { recipeId } = req.params;
+
+//   try {
+//     // Busca a receita pelo ID e atualiza os dados
+//     const updatedRecipe = await RecipeModel.findByIdAndUpdate(recipeId, {
+//       name,
+//       ingredients,
+//       instructions,
+//       imageUrl,
+//       cookingTime
+//     }, { new: true });
+
+//     res.json(updatedRecipe);
+//   } catch (error) {
+//     res.status(500).json({ message: 'Failed to update recipe', error });
+//   }
+// });
+
+
+router.put("/", verifyToken, async (req, res) => {
+  const recipe = await RecipeModel.findById(req.body.recipeID);
+  const user = await UserModel.findById(req.body.userID);
+  try {
+    user.savedRecipes.push(recipe);
+    await user.save();
+    console.log("Saved recipe: ", recipe);
+    res.status(201).json({ savedRecipes: user.savedRecipes });
+  } catch (err) {
+    console.log("Error saving recipe: ", err);
+    res.status(500).json(err);
+  }
+});
+
+
+// Rota para buscar as receitas salvas pelo usuário
+router.get("/savedRecipes/:userID", async (req, res) => {
+  try {
+    const user = await UserModel.findById(req.params.userID);
+    const savedRecipes = await RecipeModel.find({
+      _id: { $in: user.savedRecipes }
+    });
+    res.json({ savedRecipes });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Rota para atualizar uma receita
 router.put("/:recipeId", async (req, res) => {
-  const { name, ingredients, instructions, imageURL, cookingTime } = req.body;
+  const { name, ingredients, instructions, imageUrl, cookingTime } = req.body;
   const { recipeId } = req.params;
 
   try {
@@ -69,7 +148,7 @@ router.put("/:recipeId", async (req, res) => {
       name,
       ingredients,
       instructions,
-      imageURL,
+      imageUrl,
       cookingTime
     }, { new: true });
 
@@ -78,30 +157,4 @@ router.put("/:recipeId", async (req, res) => {
     res.status(500).json({ message: 'Failed to update recipe', error });
   }
 });
-
-// Rota para buscar os IDs das receitas salvas pelo usuário
-router.get("/savedRecipes/ids", async (req, res) => {
-  try {
-    // Busca o usuário pelo ID e retorna os IDs das receitas salvas
-    const user = await UserModel.findById(req.query.userId)
-    res.json({savedRecipes: user?.savedRecipes})
-  } catch (error) {
-    res.json(error)
-  }
-})
-// Rota para buscar as receitas salvas pelo usuário
-router.get("/savedRecipes", async (req, res) => {
-  try {
-    // Busca o usuário pelo ID e busca todas as receitas que possuem ID salvo na lista de receitas salvas do usuário
-    const user = await UserModel.findById(req.query.userId)
-    const savedRecipes = await RecipeModel.find({
-      _id: { $in: user.savedRecipes}
-    })
-    res.json({savedRecipes})
-  } catch (error) {
-    res.json(error)
-  }
-})
-
 export { router as recipesRouter };
-
